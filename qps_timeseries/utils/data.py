@@ -14,7 +14,8 @@ __license__ = 'MPL 2.0'
 from qgis.PyQt.QtCore import (
     QDate,
     QRegExp,
-    Qt
+    Qt,
+    QVariant
 )
 
 from matplotlib.dates import date2num, num2date
@@ -52,15 +53,25 @@ def get_base_plot_data(qgs_feature, qgs_layer, qps_timeseries_layer=None):
         else:
 
             x_date = QDate.fromString(fld.name()[1:], "yyyyMMdd").toPyDate()
-
+            value_original = attrs[idx]
+            if isinstance(value_original, QVariant):
+                value = value_original.value()
+            else:
+                value = value_original
             # Only for date >= qps_timeseries_layer.min_date and <= qps_timeseries_layer.max_date
             if qps_timeseries_layer:
                 if x_date >= qps_timeseries_layer.min_date and x_date <= qps_timeseries_layer.max_date:
-                    x.append(x_date)
-                    y.append(float(attrs[idx]))
+                    try:
+                        x.append(x_date)
+                        y.append(float(value))
+                    except ValueError:
+                        continue
             else:
-                x.append(x_date)
-                y.append(float(attrs[idx]))
+                try:
+                    x.append(x_date)
+                    y.append(float(value))
+                except ValueError:
+                    continue
 
     if qps_timeseries_layer and qps_timeseries_layer.detrending:
         y = np.array(y) - np.array(get_line_trend_plot_data(x, y)[1])
